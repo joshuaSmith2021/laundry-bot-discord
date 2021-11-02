@@ -1,4 +1,5 @@
 import json
+import re
 
 import requests
 
@@ -15,16 +16,20 @@ COLORS = {
 
 @bot.command()
 async def laundry(ctx):
-    req = requests.post('https://a105-207-62-170-220.ngrok.io/fulfillment')
+    req = requests.post('http://127.0.0.1:5000/raw_status')
     status = req.json()
 
-    message = status['prompt']['firstSimple']['speech']
-    both_status = [x.replace('.', '') for x in message.split('. ')]
-    laundry_status, dryer_status = both_status
+    machines = status['machines']
+    messages = status['messages']
+
+    washers = [x for x in machines if x[0] == 'Washer']
+    dryers = [x for x in machines if x[0] == 'Dryer']
+
+    washer_avail = any([re.match('^\d+.*$', x[2]) for x in washers])
+    dryer_avail = any([re.match('^\d+.*$', x[2]) for x in dryers])
+    both_booleans = [washer_avail, dryer_avail]
 
     current_color = 0xdedede
-
-    both_booleans = [len(x.split()) == 5 for x in both_status]
     if all(both_booleans):
         current_color = COLORS['green']
     elif any(both_booleans):
@@ -32,9 +37,20 @@ async def laundry(ctx):
     else:
         current_color = COLORS['red']
 
-    embed = discord.Embed(title="tšɨłkukunɨtš laundry", color=current_color)
+    embed=discord.Embed(title='tšɨłkukunɨtš laundry', color=current_color)
 
-    await ctx.channel.send(status['prompt']['firstSimple']['speech'])
+    for msg, mch in zip(messages, [washers, dryers]):
+        mch_msg = '\n'.join(map(lambda x: f'{x[0]} {x[1]}: {x[2]}', mch))
+        embed.add_field(name=msg, value=mch_msg, inline=True)
+
+    await ctx.channel.send(embed=embed)
+
+
+@bot.event
+async def on_ready():
+    print('Bot running...')
+    activity = discord.Activity(name='!laundry', type=discord.ActivityType.listening)
+    await bot.change_presence(activity=activity)
 
 
 with open('credentials.json') as f:
