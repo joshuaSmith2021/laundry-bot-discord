@@ -6,6 +6,8 @@ import requests
 import discord
 from discord.ext import commands
 
+SERVER_URL = 'https://a105-207-62-170-220.ngrok.io'
+
 bot = commands.Bot(command_prefix='!')
 
 COLORS = {
@@ -16,7 +18,7 @@ COLORS = {
 
 @bot.command()
 async def laundry(ctx):
-    req = requests.post('http://127.0.0.1:5000/raw_status')
+    req = requests.post(f'{SERVER_URL}/raw_status')
     status = req.json()
 
     machines = status['machines']
@@ -25,8 +27,8 @@ async def laundry(ctx):
     washers = [x for x in machines if x[0] == 'Washer']
     dryers = [x for x in machines if x[0] == 'Dryer']
 
-    washer_avail = any([re.match('^\d+.*$', x[2]) for x in washers])
-    dryer_avail = any([re.match('^\d+.*$', x[2]) for x in dryers])
+    washer_avail = any([re.match('^[^\d]+$', x[2]) for x in washers])
+    dryer_avail = any([re.match('^[^\d]+$', x[2]) for x in dryers])
     both_booleans = [washer_avail, dryer_avail]
 
     current_color = 0xdedede
